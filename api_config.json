@@ -7,7 +7,15 @@
       "model": "deepseek/deepseek-v3/community",
       "max_tokens": 1024,
       "stream": true
+    },
+    {
+      "name": "mnapi",
+      "base_url": "https://cf.mnapi.com/v1",
+      "api_key": "sk-QOgzIgNiktfAja94df8An4WsWDN8xD7rWiefgHhYo9ppEQJn",
+      "model": "gpt-4o",
+      "max_tokens": 2000,
+      "stream": true
     }
   ],
-  "current_api_index": 0
+  "current_api_index": 1
 }
