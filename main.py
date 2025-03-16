@@ -2,6 +2,8 @@ from openai import OpenAI
 import re
 import os
 import json
+import time
+import tiktoken
 
 # 配置文件路径
 CONFIG_FILE = "api_config.json"
@@ -259,6 +261,37 @@ def handle_api_commands(command):
             
     return False
 
+# 获取模型的编码器
+def get_encoder(model_name):
+    """尝试获取模型的编码器，如果不可用则使用通用编码器"""
+    try:
+        # 转换模型名称，去掉前缀路径
+        if "/" in model_name:
+            model_parts = model_name.split("/")
+            simplified_name = model_parts[-1]
+            # 对于deepseek类模型，尝试使用cl100k_base编码器
+            if "deepseek" in model_name.lower():
+                return tiktoken.get_encoding("cl100k_base")
+        else:
+            simplified_name = model_name
+            
+        return tiktoken.encoding_for_model(simplified_name)
+    except:
+        # 如果无法获取特定模型的编码器，使用通用编码器
+        try:
+            return tiktoken.get_encoding("cl100k_base")
+        except:
+            return None
+
+# 计算输入文本的token数
+def count_tokens(text, model_name):
+    """计算文本的token数"""
+    encoder = get_encoder(model_name)
+    if encoder:
+        return len(encoder.encode(text))
+    # 如果没有编码器，使用简单的估算方法（每4个字符约1个token）
+    return len(text) // 4
+
 # 主程序
 def main():
     """主程序入口"""
@@ -305,6 +338,10 @@ def main():
             print("AI：", end="", flush=True)
             
             try:
+                # 计时开始
+                start_time = time.time()
+                current_text = ""
+                
                 response = client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -315,20 +352,42 @@ def main():
                 full_response = []
                 
                 if stream:
+                    # 使用更简单的方法显示统计信息
                     for chunk in response:
                         content = chunk.choices[0].delta.content or ""
-                        print(content, end="", flush=True)
                         full_response.append(content)
+                        current_text += content
+                        
+                        # 更新token计数和耗时
+                        token_count = count_tokens(current_text, model)
+                        elapsed_time = time.time() - start_time
+                        token_speed = token_count / elapsed_time if elapsed_time > 0 else 0
+                        
+                        # 打印内容
+                        print(content, end="", flush=True)
+                        
+                        # 统计信息暂存
+                        stats_line = f"\n耗时: {elapsed_time:.2f}s 消耗Token: {token_count} 速度: {token_speed:.2f} token/s"
+                    
+                    # 完成后，打印最终统计信息
+                    print(stats_line)
                 else:
                     content = response.choices[0].message.content
-                    print(content)
                     full_response.append(content)
+                    print(content)
                     
-                print()  # 换行
+                    # 计算token数和耗时
+                    token_count = count_tokens(content, model)
+                    elapsed_time = time.time() - start_time
+                    token_speed = token_count / elapsed_time if elapsed_time > 0 else 0
+                    
+                    # 完成后，打印统计信息
+                    print(f"\n耗时: {elapsed_time:.2f}s 消耗Token: {token_count} 速度: {token_speed:.2f} token/s")
+                
                 messages.append({"role": "assistant", "content": "".join(full_response)})
                 
             except Exception as e:
-                print(f"API请求失败: {str(e)}")
+                print(f"\nAPI请求失败: {str(e)}")
             
         except KeyboardInterrupt:
             print("\n对话已中断")
