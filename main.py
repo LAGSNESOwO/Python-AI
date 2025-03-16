@@ -11,7 +11,7 @@ CONFIG_FILE = "api_config.json"
 # 默认配置
 DEFAULT_API = {
     "name": "默认 API",
-    "base_url": "https://api.ppinfra.com/",
+    "base_url": "https://api.ppinfra.com/v3/openai",
     "api_key": "sk_kuEi2Hgrp7SqCGSlxycmeBOY047_34FMoqj6J2FOw5o",
     "model": "deepseek/deepseek-v3/community",
     "max_tokens": 1024,
